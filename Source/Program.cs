@@ -97,9 +97,16 @@ namespace PaperToWord
                 var cfg = new Config();
                 List<string> errors;
                 List<Page> pages = Sizer.Build(files, cfg, null, out errors);
-                DocxBuilder.Write(outFile, pages);
+                // 成功页数为 0 判整批失败：不产出空文档（与 GUI 一致，BR-09）
+                if (pages.Count == 0)
+                {
+                    string detail = errors.Count > 0 ? string.Join("\n", errors.ToArray()) : "没有可处理的图片。";
+                    throw new InvalidOperationException("全部图片处理失败：\n" + detail);
+                }
+                // 用 Write 的返回值：重名/占用时实际落盘名可能已改名（绝不覆盖）
+                string finalPath = DocxBuilder.Write(outFile, pages);
                 Console.WriteLine(AppTitle + "（命令行模式）");
-                Console.WriteLine("输出: " + outFile);
+                Console.WriteLine("输出: " + finalPath);
                 Console.WriteLine("页数: " + pages.Count + (errors.Count > 0 ? "，跳过 " + errors.Count + " 张失败图片" : ""));
                 Native.MessageBeep(0xFFFFFFFFu);
             }

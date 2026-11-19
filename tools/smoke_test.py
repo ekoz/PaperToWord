@@ -5,6 +5,8 @@
   1. 用 zlib 手写一张横版"试卷"PNG（1400x1000，纯标准库，无需 Pillow）
   2. 调用 PaperToWord.exe 命令行模式生成 docx
   3. 校验 docx：zip 完整性 + 必需部件 + 每个 XML 可解析 + 图片数量 + 分节数量
+  4. 回归 A：全部图片无效 → 退出码 1 且不产出任何 docx
+  5. 回归 B：目标重名 → 自动改名 _2，绝不覆盖第一个文件，stdout 报告实际路径
 
 退出码 0 = 通过；非 0 = 失败（打印原因）。
 用法：python tools/smoke_test.py [exe 路径]
@@ -71,6 +73,60 @@ def fail(msg):
     return 1
 
 
+def run_exe(exe, args):
+    """命令行模式调用；返回 (退出码, stdout)。winexe 的输出靠继承的管道句柄捕获。"""
+    r = subprocess.run([exe] + list(args), timeout=300,
+                       capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    out = (r.stdout or "").strip()
+    print("stdout: " + out)
+    return r.returncode, out
+
+
+def check_all_fail(exe, tmp):
+    """回归 A：全部图片处理失败 → 退出码 1，且不产出空 docx。"""
+    bad = os.path.join(tmp, "bad.png")
+    with open(bad, "wb") as f:
+        f.write(b"not a png at all")          # 扩展名合法，解码必失败
+    out = os.path.join(tmp, "regA", "a.docx")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    rc, _ = run_exe(exe, [bad, "--out=" + out])
+    if rc != 1:
+        return fail("回归A 全部失败时退出码应为 1，实际 %d" % rc)
+    made = [n for n in os.listdir(os.path.dirname(out)) if n.endswith(".docx")]
+    if made:
+        return fail("回归A 全部失败时不应产出 docx，实际有: " + ", ".join(made))
+    print("regA  : 全部失败 → 退出码 1，无空文档")
+    return 0
+
+
+def check_rename(exe, tmp):
+    """回归 B：目标重名 → 自动改名 _2、绝不覆盖第一个文件；stdout 报告实际路径。"""
+    img = os.path.join(tmp, "paper_rename.png")
+    make_png(img)
+    d = os.path.join(tmp, "regB")
+    os.makedirs(d, exist_ok=True)
+    out = os.path.join(d, "b.docx")
+
+    rc, _ = run_exe(exe, [img, "--out=" + out])
+    if rc != 0 or not os.path.isfile(out):
+        return fail("回归B 第一次生成失败（退出码 %d）" % rc)
+    first = open(out, "rb").read()
+
+    rc, text = run_exe(exe, [img, "--out=" + out])
+    if rc != 0:
+        return fail("回归B 第二次生成失败（退出码 %d）" % rc)
+    second = os.path.join(d, "b_2.docx")
+    if not os.path.isfile(second):
+        return fail("回归B 重名时未自动改名生成 b_2.docx")
+    if open(out, "rb").read() != first:
+        return fail("回归B 第一个文件被覆盖（违反绝不覆盖约束）")
+    if "b_2.docx" not in text:
+        return fail("回归B stdout 未报告改名后的实际路径，实际输出: " + text)
+    print("regB  : 重名 → b.docx 未被覆盖，另存 b_2.docx 且 stdout 报告实际路径")
+    return 0
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     exe = sys.argv[1] if len(sys.argv) > 1 else os.path.join(root, "dist", "PaperToWord.exe")
@@ -121,6 +177,14 @@ def main():
     z.close()
 
     print("docx  : %d bytes, media=%d, sections=%d, xml parts OK" % (size, len(media), sections))
+
+    rc = check_all_fail(exe, tmp)
+    if rc:
+        return rc
+    rc = check_rename(exe, tmp)
+    if rc:
+        return rc
+
     print("PASS")
     return 0
 
