@@ -95,10 +95,10 @@ docx 包内固定部件：`[Content_Types].xml`、`_rels/.rels`、`docProps/core
 
 | 规范项 | 工具 | 配置文件 | 说明 |
 | :--- | :--- | :--- | :--- |
-| CI/CD | 无 | - | 无 `.github/workflows/`、`Jenkinsfile`、`.gitlab-ci.yml` |
+| CI/CD | GitHub Actions | `.github/workflows/build.yml` | push（main/master）与 PR：架构不变量检查 → `build.ps1` 编译 → `tools/smoke_test.py` 冒烟；打 `v*` tag 自动发布 GitHub Release（exe 不入库，只作 Release 附件） |
 | 代码规范 | 无自动检查 | - | 无 `.editorconfig` / `checkstyle` / StyleCop / Roslyn Analyzer；实际风格：类型与方法 PascalCase、局部变量 camelCase、私有字段 `_camelCase`、中文注释与中文 UI 文案 |
 | 容器化 | 无 | - | 无 `Dockerfile` / `docker-compose.yml` / `k8s/`；交付物为单 exe（绿色版） |
-| 测试 | 无 | - | 无测试工程、无 `src/test` 对应目录、无覆盖率配置 |
+| 测试 | 冒烟脚本 | `tools/smoke_test.py` | 仅标准库：合成一张横版试卷 PNG → 调 exe CLI 生成 docx → 校验 zip CRC / 必需部件 / XML 可解析 / 图片与分节数量；另含"全部图片失败 → 退出码 1 且不产出空文档"与"目标重名 → 自动改名 `_2`、绝不覆盖"两条回归。无单元测试工程 |
 | 依赖管理 | 无 | - | 无 NuGet 清单，零第三方包 |
 | 版本标识 | 源码常量 | `Program.cs` | `AppTitle = "PaperToWord v1.3"`；docx `app.xml` 中 `AppVersion` 为 `1.2000` <!-- TODO: 待确认是否需与应用版本 v1.3 对齐 --> |
 | 发布产物 | 手工 | `dist/` | `PaperToWord.exe`、`使用说明.txt`、`示例输出_时间在哪里.docx` |
@@ -117,7 +117,7 @@ docx 包内固定部件：`[Content_Types].xml`、`_rels/.rels`、`docProps/core
 
 - **构建可复现**：完整命令已固化到根目录 `build.ps1`（系统自带 csc.exe，含占用预检）。图标双参数缺一不可：`/win32icon` 设 PE 图标（资源管理器），`/resource:app.ico,AppIcon` 供 `GetManifestResourceStream("AppIcon")` 读取（窗口/任务栏）。新增 `.cs` 需同步加入 `build.ps1` 的源文件清单。
 - **目标框架不可核对**：`.NET Framework 4.x` 结论来自源码注释与《使用说明》，无机器可读配置。
-- **无自动化测试**：裁切几何、自然排序、ZIP/OOXML 正确性均依赖手工验证。
+- **无单元测试**：ZIP/OOXML 与两条 CLI 回归由 `tools/smoke_test.py` 覆盖；裁切几何、自然排序、GUI 交互仍依赖手工验证。
 - **ZIP 不压缩**：store 模式使 docx 体积偏大，换取实现简单与 Office 兼容性。
 - **图片一律转 JPEG**：PNG 透明区域以白色填充，适合打印场景；GIF 多帧仅取首帧（`Image.FromStream` 行为）。
 - **静态可变状态**：`MediaStore` 为进程级单例，GUI 以 `_busy` 防重入，CLI 每次进程一次调用；当前单任务模型下安全，未来若并行化需重构为实例状态。

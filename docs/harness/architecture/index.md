@@ -75,13 +75,12 @@ Program ──> Sizer + DocxBuilder（CLI 模式直接复用核心，不经过 U
 | 文档 | 自研 OOXML（WordprocessingML） | 源码 |
 | 归档 | 自研 ZIP Writer（store，不压缩） | 源码 |
 | 第三方依赖 | 无（仅 BCL） | 无 packages.config / NuGet 清单 |
-| 构建 | **不可复现**：无 `.sln` / `.csproj` / `build.*` / `Makefile` | 仓库根目录扫描 <!-- TODO: 待确认 csc 命令与图标嵌入参数 --> |
-| 测试 | 无测试工程、无自动化测试 | 仓库扫描 <!-- TODO: 待确认后续测试策略 --> |
+| 构建 | **可复现**：根目录 `build.ps1` 固化完整 csc 命令（含占用预检） | `build.ps1` + `exp/build.md` EXP-B1；CI 跑同一脚本 |
+| 测试 | 冒烟测试 `tools/smoke_test.py`（本地与 CI 通用，仅标准库）；**无单元测试工程** | 仓库扫描 |
 
 ## 7. 已知架构风险
 
-- 构建不可复现：无法仅凭仓库重建 exe；图标经 `/win32icon` 还是 `/resource:app.ico,AppIcon` 嵌入未确认。
-- 目标框架与语言版本无机器可读配置。
-- 无自动化测试：裁切几何、自然排序、ZIP/OOXML 正确性依赖手工验证。
+- 目标框架与语言版本无机器可读配置（无 `.csproj`，靠源码注释与《使用说明》佐证）。
+- 无单元测试：裁切几何、自然排序、ZIP/OOXML 正确性仍主要依赖冒烟测试与手工验证。
 - 进程级静态可变状态（`MediaStore.Map`、`Program._iconStream`、`ImageUtil._codec`）在单任务模型下安全，并行化前必须重构。
 - ZIP store 不压缩，docx 体积偏大；统一转 JPEG 会使 PNG 透明区域变白、GIF 仅取首帧。
