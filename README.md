@@ -4,7 +4,8 @@
 
 [![.NET](https://img.shields.io/badge/.NET%20Framework-4.8-512BD4)](#构建)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D7)](#系统要求)
-[![Size](https://img.shields.io/badge/exe-104KB-brightgreen)](dist/PaperToWord.exe)
+[![Download](https://img.shields.io/badge/download-exe%20104KB-brightgreen)](https://github.com/ekoz/PaperToWord/releases/latest)
+[![CI](https://github.com/ekoz/PaperToWord/actions/workflows/build.yml/badge.svg)](https://github.com/ekoz/PaperToWord/actions/workflows/build.yml)
 [![Deps](https://img.shields.io/badge/dependencies-zero-blue)](#构建)
 [![Office](https://img.shields.io/badge/output-WPS%20%2F%20Word-orange)](#快速开始)
 
@@ -14,6 +15,8 @@ PaperToWord 沿中线把照片裁成左右两片，**每片独占一页 A4 并�
 生成的 `.docx` 不依赖本机安装任何 Office——文档由程序按 OOXML 标准手工组装，WPS / Word 2007+ 直接打开。
 
 **双击即用 · 单文件 104KB · 无需安装 · 无需联网 · 无需 Python/Node/Office**
+
+👉 **[下载 PaperToWord.exe](https://github.com/ekoz/PaperToWord/releases/latest)**（Releases 页，Windows 10/11 直接双击运行）
 
 ![主界面](docs/assets/readme-gui.png)
 
@@ -103,10 +106,25 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 - **零第三方依赖**：只引用 System / System.Core / System.Drawing / System.Windows.Forms
 - 图标双参数缺一不可：`/win32icon`（资源管理器图标）+ `/resource:app.ico,AppIcon`（窗口图标）
 
+### CI 自动构建与发布
+
+推送到 `main`/`master` 会触发 [`.github/workflows/build.yml`](.github/workflows/build.yml)：
+在 `windows-latest` 上用系统自带 csc 跑同一个 `build.ps1`，再做架构不变量检查与冒烟测试（合成一张试卷图 → 生成 docx → 校验 ZIP 与 OOXML）。
+
+打 tag 即发版，无需手动编译或上传：
+
+```powershell
+git tag v1.3.1
+git push origin v1.3.1     # 触发 release：产物挂到 GitHub Releases
+```
+
+exe 不入库（`.gitignore` 已排除 `dist/PaperToWord.exe`），只作为 Release 附件分发；完整使用说明同时渲染在 Release 页面正文里。
+
 ## 项目结构
 
 ```
 PaperToWord/
+├── AGENTS.md              # AI 编码工具的项目入口（约束速览 + 文档导航）
 ├── build.ps1              # 可复现构建脚本（含占用预检）
 ├── Source/
 │   ├── Program.cs         # 入口：GUI/CLI 分流
@@ -116,8 +134,8 @@ PaperToWord/
 │   ├── MainForm.cs        # WinForms 界面（TableLayoutPanel 布局）
 │   └── NatSort.cs         # 自然排序（第2页 < 第10页）
 ├── dist/
-│   ├── PaperToWord.exe    # 产物（104KB）
-│   └── 使用说明.txt        # 给终端用户的说明
+│   ├── PaperToWord.exe    # 产物（104KB，由 CI 生成，不入库）
+│   └── 使用说明.txt        # 给终端用户的说明（同时渲染进 Release 正文）
 └── docs/                  # HelixHarness 工程体系
     ├── harness/           #   架构约束 + lint 脚本
     ├── knowledge/         #   能力地图 / BR-01~16 / 踩坑经验库

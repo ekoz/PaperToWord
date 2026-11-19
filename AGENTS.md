@@ -1,4 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
+
+> 本文件是跨 AI 编码工具的通用项目入口（原 `CLAUDE.md`，已改为开放约定命名，Claude Code / Codex / DSH 等宿主均可自动加载）。
 
 ## 项目概述
 

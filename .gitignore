@@ -1,6 +1,9 @@
 # HelixHarness 本机私有目录（锁文件/统计缓存），不入库
 .helixharness/
 
+# 宿主私有配置：含本机绝对路径（python/插件缓存位置），不入库、不跨机复用
+.claude/
+
 # 构建产物：由 CI 编译并挂到 Release，不入库（exe 由 build.ps1 生成）
 dist/PaperToWord.exe
 

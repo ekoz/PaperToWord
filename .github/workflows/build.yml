@@ -82,14 +82,33 @@ jobs:
           $exe  = (Get-ChildItem -Recurse -File -Filter PaperToWord.exe artifacts | Select-Object -First 1).FullName
           if (-not $exe) { throw "artifact 里没找到 PaperToWord.exe" }
           $docs = (Get-ChildItem -Recurse -File -Filter *.txt artifacts | Select-Object -First 1).FullName
-          if (-not (gh release view $tag 2>$null)) {
-            gh release create $tag --title "PaperToWord $tag" `
-              --notes "Windows 桌面工具：试卷原图对半裁开，一键排成 A4 的 Word。下载 PaperToWord.exe 双击即用（Win10/11 自带 .NET Framework 4.8，无需安装任何东西）。"
-          }
+
+          # 说明全文写进 Release 正文：访客不必下载附件就能看到用法
+          $notes = Join-Path $env:RUNNER_TEMP "notes.md"
+          $lines = @(
+            "Windows 桌面工具：试卷原图对半裁开，一键排成 A4 的 Word。",
+            "下载 PaperToWord.exe 双击即用（Win10/11 自带 .NET Framework 4.8，无需安装任何东西，全程离线）。"
+          )
+          $ascii = $null
           if ($docs) {
-            gh release upload $tag $exe $docs --clobber
+            $lines += @("", "## 使用说明", "", (Get-Content -LiteralPath $docs -Raw -Encoding UTF8).TrimEnd())
+            # gh 会把非 ASCII 文件名安全化成 default.txt，故附件另存 ASCII 名
+            $ascii = Join-Path (Split-Path -LiteralPath $exe) "USAGE.txt"
+            Copy-Item -LiteralPath $docs -Destination $ascii -Force
           } else {
-            "警告：未找到说明 txt，只上传 exe"
+            "警告：未找到说明 txt，Release 正文与附件都不含使用说明"
+          }
+          [IO.File]::WriteAllText($notes, ($lines -join "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
+
+          if (gh release view $tag 2>$null) {
+            gh release edit $tag --notes-file $notes
+          } else {
+            gh release create $tag --title "PaperToWord $tag" --notes-file $notes
+          }
+          if ($ascii) {
+            gh release upload $tag $exe $ascii --clobber
+            gh release delete-asset $tag default.txt --yes 2>$null   # 清理早期版本遗留的安全化文件名附件
+          } else {
             gh release upload $tag $exe --clobber
           }
           gh release view $tag
