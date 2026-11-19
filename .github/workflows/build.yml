@@ -27,10 +27,14 @@ jobs:
         run: |
           $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
           if (-not (Test-Path $csc)) { throw "runner 镜像缺少 .NET Framework csc：$csc" }
-          & $csc /version
+          # 注意：csc 没有 /version 选项（会报 CS2007），版本从文件属性读
+          "compiler   : $csc"
+          "file version: $((Get-Item $csc).VersionInfo.FileVersion)"
 
       - name: 架构不变量检查
         shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
         run: python docs/harness/linters/invariant-check.py
 
       - name: 编译
@@ -39,6 +43,8 @@ jobs:
 
       - name: 冒烟测试（生成 docx 并校验 OOXML）
         shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
         run: python tools/smoke_test.py
 
       - name: 上传构建产物
@@ -74,8 +80,8 @@ jobs:
           # 说明文档用通配符取，避免脚本里硬编码中文文件名
           $docs = (Get-ChildItem dist -Filter *.txt | Select-Object -First 1).FullName
           if (-not (gh release view $tag 2>$null)) {
-            gh release create $tag --title "PaperToWord $tag" --latest `
-              --notes "Windows 桌面工具：试卷原图对半裁开，一键排成 A4 的 Word。下载 dist 里的 PaperToWord.exe，双击即用（Win10/11 自带 .NET Framework 4.8，无需安装任何东西）。"
+            gh release create $tag --title "PaperToWord $tag" `
+              --notes "Windows 桌面工具：试卷原图对半裁开，一键排成 A4 的 Word。下载 PaperToWord.exe 双击即用（Win10/11 自带 .NET Framework 4.8，无需安装任何东西）。"
           }
           gh release upload $tag "dist/PaperToWord.exe" $docs --clobber
           gh release view $tag
