@@ -1,6 +1,8 @@
 # AGENTS.md
 
-> 本文件是跨 AI 编码工具的通用项目入口（原 `CLAUDE.md`，已改为开放约定命名，Claude Code / Codex / DSH 等宿主均可自动加载）。
+> 本文件是跨 AI 编码工具的通用项目入口（原 `CLAUDE.md`，改为开放约定命名）。
+> 已验证会自动加载本文件：DeepSeek Harness、Codex（`hosts/codex/project.json` 的 `entry_file` = `AGENTS.md`）。
+> 只找 `CLAUDE.md` 的宿主（HelixHarness 的 claude-code host，`entry_file` 硬编码为 `CLAUDE.md`）由同目录指针文件转介至此。
 
 ## 项目概述
 

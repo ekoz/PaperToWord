@@ -125,6 +125,7 @@ exe 不入库（`.gitignore` 已排除 `dist/PaperToWord.exe`），只作为 Rel
 ```
 PaperToWord/
 ├── AGENTS.md              # AI 编码工具的项目入口（约束速览 + 文档导航）
+├── CLAUDE.md              # 一行指针，转介到 AGENTS.md（兼容旧宿主）
 ├── build.ps1              # 可复现构建脚本（含占用预检）
 ├── Source/
 │   ├── Program.cs         # 入口：GUI/CLI 分流
