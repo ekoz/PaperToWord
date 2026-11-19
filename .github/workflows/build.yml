@@ -69,7 +69,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: PaperToWord-windows
-          path: .            # artifact 内保留 dist/ 前缀，还原到 ./dist/
+          path: artifacts    # v4 会剥掉共同父目录 dist/，产物层级不固定，故递归查找
 
       - name: 创建 Release 并上传 exe
         shell: pwsh
@@ -77,11 +77,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $tag = "${{ github.ref_name }}"
-          Get-ChildItem -Recurse dist | ForEach-Object { "dist 内容: $($_.FullName)" }
-          $exe  = (Get-ChildItem dist -Filter PaperToWord.exe | Select-Object -First 1).FullName
+          Get-ChildItem -Recurse artifacts | ForEach-Object { "artifact: $($_.FullName)" }
+          # 不猜目录层级：递归定位（此前按 dist/ 前缀取，拿到的是 checkout 恢复的 git 文件）
+          $exe  = (Get-ChildItem -Recurse -File -Filter PaperToWord.exe artifacts | Select-Object -First 1).FullName
           if (-not $exe) { throw "artifact 里没找到 PaperToWord.exe" }
-          # 说明文档用通配符取，避免脚本里硬编码中文文件名
-          $docs = (Get-ChildItem dist -Filter *.txt | Select-Object -First 1).FullName
+          $docs = (Get-ChildItem -Recurse -File -Filter *.txt artifacts | Select-Object -First 1).FullName
           if (-not (gh release view $tag 2>$null)) {
             gh release create $tag --title "PaperToWord $tag" `
               --notes "Windows 桌面工具：试卷原图对半裁开，一键排成 A4 的 Word。下载 PaperToWord.exe 双击即用（Win10/11 自带 .NET Framework 4.8，无需安装任何东西）。"
