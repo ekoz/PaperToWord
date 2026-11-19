@@ -1,0 +1,6 @@
+# HelixHarness 本机私有目录（锁文件/统计缓存），不入库
+.helixharness/
+
+# 构建产物备份/临时
+*.tmp
+~$*

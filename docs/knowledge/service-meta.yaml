@@ -1,0 +1,31 @@
+# PaperToWord 服务元数据（init 扫描生成，2026-11-19）
+# 事实来源：docs/knowledge/service-boundary.md、docs/knowledge/domain-model.md、
+# docs/knowledge/architecture.md、docs/knowledge/database/index.md、
+# docs/knowledge/api/index.md、dist/使用说明.txt
+
+service: PaperToWord
+display_name: "PaperToWord（试卷裁页成Word）"
+domain: "通用域"
+# role=domain 的依据：本工具为独立运行的领域工具，主写产物（输出 docx）并承载核心业务规则
+# （裁切方式/裁切位置/DPI/页面排布/A4 纸型与方向适配）。
+# 非 gateway（无对外接入与流量入口）、非 orchestrator（不调用任何下游服务）、
+# 非 platform（不是被复用的通用支撑能力，而是面向具体场景的终端工具）。
+role: domain
+repo: null # TODO: 仓库 URL
+owners: [] # TODO: owner team
+upstreams: [] # 无上游服务；调用方仅为本机终端使用者（GUI 操作或命令行调用）
+downstreams: [] # 无下游业务服务；仅依赖操作系统文件系统与 .NET Framework 运行时（非业务依赖）
+owned_data:
+  - "输出 docx（本地文件系统；每次运行产出一份，本工具主写）"
+  - "临时文件 .esw_*.tmp（同目录瞬时文件，成功后原子改名为正式 docx）"
+  - "处理清单 / 裁切配置 / 裁片 / A4 页（仅进程内存，运行结束即释放，不持久化）"
+published_events: [] # 无 MQ / 消息发送代码
+consumed_events: [] # 无 MQ / 消息消费代码
+capabilities:
+  - 试卷图片收集与页序管理
+  - 横版卷面裁切与裁切位置微调
+  - A4 版面适配与纸型方向选择
+  - 图片方向纠正与清晰度（DPI）控制
+  - OOXML Word 文档生成与原子安全落盘
+  - GUI 与 CLI 双入口批量转换
+status_entities: [] # 无业务状态机；SplitMode 仅为裁切配置选项，非实体生命周期状态

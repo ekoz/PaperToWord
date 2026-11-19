@@ -1,0 +1,53 @@
+{
+  "projectType": "unknown",
+  "detectionLevel": "fast",
+  "confidence": 0.5,
+  "techStack": {
+    "hasBackend": false,
+    "hasFrontend": false
+  },
+  "scanPlan": [
+    "scan-tech",
+    "scan-db",
+    "scan-api",
+    "scan-service",
+    "scan-boundary",
+    "scan-service-meta"
+  ],
+  "userConfirmed": false,
+  "scanStatus": "completed",
+  "bootstrapStatus": "completed",
+  "completedAt": 1795055960,
+  "deliverables": {
+    "knowledge": {
+      "count": 13,
+      "files": [
+        "docs/knowledge/api/desktop-entry-api.md",
+        "docs/knowledge/api/index.md",
+        "docs/knowledge/architecture.md",
+        "docs/knowledge/database/er.md",
+        "docs/knowledge/database/index.md",
+        "docs/knowledge/domain-mapping.md",
+        "docs/knowledge/domain-model.md",
+        "docs/knowledge/exp/index.md",
+        "docs/knowledge/index.md",
+        "docs/knowledge/prd/index.md",
+        "docs/knowledge/project-context.md",
+        "docs/knowledge/service-boundary.md",
+        "docs/knowledge/service-meta.yaml"
+      ]
+    },
+    "harness": {
+      "count": 7,
+      "files": [
+        "docs/harness/architecture/index.md",
+        "docs/harness/index.md",
+        "docs/harness/infrastructure/logging.md",
+        "docs/harness/infrastructure/security.md",
+        "docs/harness/invariants/biz.md",
+        "docs/harness/linters/invariant-check.py",
+        "docs/harness/linters/spec-sync-check.py"
+      ]
+    }
+  }
+}
