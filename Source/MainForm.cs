@@ -18,6 +18,8 @@ namespace PaperToWord
         readonly Panel _bottom = new Panel();
         readonly TextBox _outBox = new TextBox();
         readonly Button _btnOut = new Button();
+        readonly Button _btnOpenDir = new Button();
+        readonly Button _btnOpenFile = new Button();
         readonly ComboBox _mode = new ComboBox();
         readonly ComboBox _quality = new ComboBox();
         readonly ComboBox _layout = new ComboBox();
@@ -117,6 +119,10 @@ namespace PaperToWord
             SetPlaceholder();
             _btnOut.Text = "浏览…";
             _btnOut.Bounds = new Rectangle(604, 12, 90, 26);
+            _btnOpenDir.Text = "打开目录";
+            _btnOpenDir.Bounds = new Rectangle(700, 12, 90, 26);
+            _btnOpenFile.Text = "打开文件";
+            _btnOpenFile.Bounds = new Rectangle(796, 12, 90, 26);
             _btnRun.Text = "▶ 执行：裁开并生成 Word";
             _btnRun.Bounds = new Rectangle(92, 48, 270, 40);
             _btnRun.BackColor = Color.FromArgb(43, 87, 154);
@@ -124,7 +130,7 @@ namespace PaperToWord
             _btnRun.FlatStyle = FlatStyle.Flat;
             _btnRun.Font = new Font("Microsoft YaHei UI", 11F, FontStyle.Bold);
             _btnRun.TabStop = false;
-            _bottom.Controls.AddRange(new Control[] { _outLabel, _outBox, _btnOut, _btnRun });
+            _bottom.Controls.AddRange(new Control[] { _outLabel, _outBox, _btnOut, _btnOpenDir, _btnOpenFile, _btnRun });
             // 科目快捷键：一键填充输出名（今日日期-科目.docx）
             string[,] subjects = { { "数学", "shuxue" }, { "语文", "yuwen" }, { "英语", "en" } };
             int sx = 380;
@@ -141,9 +147,12 @@ namespace PaperToWord
             }
             _bottom.Resize += delegate
             {
-                int w = _bottom.ClientRectangle.Width;
-                _outBox.Width = Math.Max(160, w - 92 - 110 - 16);
-                _btnOut.Left = Math.Max(92, w - 110 - 8);
+                const int bw = 90, gap = 6;
+                int x = Math.Max(92, _bottom.ClientRectangle.Width - 8 - bw);
+                _btnOpenFile.Left = x; x -= bw + gap;
+                _btnOpenDir.Left = x; x -= bw + gap;
+                _btnOut.Left = x;
+                _outBox.Width = Math.Max(160, _btnOut.Left - 92 - 8);
             };
 
             // ---- 中部：左列表 / 右预览 ----
@@ -319,9 +328,13 @@ namespace PaperToWord
             _btnUp.Click += delegate { MoveSelection(-1); };
             _btnDown.Click += delegate { MoveSelection(1); };
             _btnOut.Click += delegate { PickOutPath(); };
+            _btnOpenDir.Click += delegate { OpenOutputDir(); };
+            _btnOpenFile.Click += delegate { OpenOutputFile(); };
             _btnRun.Click += delegate { RunInBackground(); };
             _list.SelectedIndexChanged += delegate { RefreshPreview(); };
             _tip.SetToolTip(_btnRun, "按列表顺序处理全部图片，生成 docx");
+            _tip.SetToolTip(_btnOpenDir, "在资源管理器中打开输出 docx 所在目录");
+            _tip.SetToolTip(_btnOpenFile, "用默认程序（Word/WPS）打开输出 docx");
         }
 
         // ---------- 文件列表 ----------
@@ -534,6 +547,59 @@ namespace PaperToWord
             return DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture) + "-.docx";
         }
 
+        // 解析最终输出 docx 的路径；无法确定（无图片且未填路径）或路径非法时返回空串。
+        string ResolveOutPath()
+        {
+            string t = OutPathOrEmpty();
+            try
+            {
+                if (t.Length == 0)
+                {
+                    if (_files.Count == 0) return "";
+                    return Path.Combine(SafeDir(_files[0]), SuggestedOutName());
+                }
+                string dir;
+                try { dir = Path.GetDirectoryName(t.TrimEnd('\\', '/')); }
+                catch { dir = null; }
+                if (string.IsNullOrEmpty(dir))
+                {
+                    if (_files.Count == 0) return "";
+                    t = Path.Combine(SafeDir(_files[0]), t);   // 只填了文件名：落到图片所在文件夹
+                }
+                if (!t.EndsWith(".docx", StringComparison.OrdinalIgnoreCase)) t += ".docx";
+                return t;
+            }
+            catch { return ""; }   // 非法字符等：由调用方提示，不弹未处理异常
+        }
+
+        void OpenOutputDir()
+        {
+            string path = ResolveOutPath();
+            if (path.Length == 0) { BeepTip("还没有可用的输出位置：请先添加图片，或检查输出路径是否合法。"); return; }
+            try
+            {
+                string dir = Path.GetDirectoryName(path);
+                if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) { BeepTip("目录不存在：" + dir); return; }
+                System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo("explorer.exe");
+                psi.Arguments = "\"" + dir + "\"";
+                System.Diagnostics.Process.Start(psi);
+            }
+            catch (Exception ex) { BeepTip("打开目录失败：" + ex.Message); }
+        }
+
+        void OpenOutputFile()
+        {
+            string path = ResolveOutPath();
+            if (path.Length == 0) { BeepTip("还没有可打开的文件：请先添加图片，或检查输出路径是否合法。"); return; }
+            if (!File.Exists(path))
+            {
+                BeepTip("docx 还没生成：" + path + "。请先点「执行」生成。");
+                return;
+            }
+            try { System.Diagnostics.Process.Start(path); }
+            catch (Exception ex) { BeepTip("打开文件失败：" + ex.Message); OpenInFolder(path); }
+        }
+
         Config CurrentConfig()
         {
             Config cfg = new Config();
@@ -669,12 +735,7 @@ namespace PaperToWord
                     "还没有图片", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
-            string outPath = OutPathOrEmpty();
-            if (outPath.Length == 0)
-                outPath = Path.Combine(SafeDir(_files[0]), SuggestedOutName());
-            else if (Path.GetDirectoryName(outPath.TrimEnd('\\', '/')).Length == 0)
-                outPath = Path.Combine(SafeDir(_files[0]), outPath);   // 只填了文件名：落到图片所在文件夹
-            if (!outPath.EndsWith(".docx", StringComparison.OrdinalIgnoreCase)) outPath += ".docx";
+            string outPath = ResolveOutPath();
 
             Config cfg = CurrentConfig();
             string[] files = _files.ToArray();
